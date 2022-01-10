@@ -1,0 +1,543 @@
+//-------------------------------------- Скрипт для последовательной варииации параметров, оказывающих влияния на точность ОМКЗ --------------------------------------------------------
+
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------- Исходные данные (настройки)--------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+// Задание на расчет
+
+int variation_load = 1;
+int variation_sc_position = 1;
+int variation_sc_phase = 1;
+int variation_ef_mutual_angle = 1;
+int variation_trans_resistance = 1;
+int variation_positive_seq = 1;
+int variation_zero_seq = 1;
+int variation_Monte_Carlo = 1;
+int Monte_Carlo_exp_num = 100;
+int Monte_Carlo_precision = 1000000;
+
+// Входные параметры для варьирования нагрузки
+
+float L_phA_start_value=0.001, L_phB_start_value=0.001, L_phC_start_value=0.001; 
+float L_phA_finish_value=2.346, L_phB_finish_value=2.525, L_phC_finish_value=2.4;
+float R_phA_start_value=0.001 R_phB_start_value=0.001, R_phC_start_value=0.001;
+float R_phA_finish_value=300, R_phB_finish_value=400, R_phC_finish_value=410;
+float load_step_change=20; // в процентах
+
+// Входные параметры для варьирования места короткого замыкания
+
+float sc_position_start_value=0;
+float sc_position_step_change=1;
+float sc_position_finish_value=100;
+
+// Входные параметры для варьирования угла КЗ 
+ 
+float sc_phase_start_value=0;
+float sc_phase_finish_value=360;
+float sc_phase_step_change=10;
+
+// Входные параметры для варьирования угла между ЭДС систем 1 и 2  
+
+float ef_mutual_angle_start_value=0;
+float ef_mutual_angle_finish_value=110;
+float ef_mutual_angle_step_change=10;
+
+// Входные параметры для варьирования переходного сопротивления
+
+float trans_resistance_start_value_int1=0.001;
+float trans_resistance_finish_value_int1=1;
+float trans_resistance_step_change_int1=0.1;
+
+float trans_resistance_start_value_int2=1;
+float trans_resistance_finish_value_int2=10;
+float trans_resistance_step_change_int2=1;
+
+float trans_resistance_start_value_int3=10;
+float trans_resistance_finish_value_int3=50;
+float trans_resistance_step_change_int3=10;
+
+// Входные параметры для варьирования сопротивления ситсемы 
+
+float positive_seq_R=3052.2848;
+float positive_seq_L=0.222934058;
+float positive_seq_finish_value=20;
+float positive_seq_step_change=0.1;
+
+float zero_seq_R=781.4467;
+float zero_seq_L=0.159811616;
+float zero_seq_finish_value=40;
+float zero_seq_step_change=0.1;
+
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------- Объявление переменных --------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+// Расчётные параметры
+
+float L_load_phA,L_load_phB,L_load_phC;
+float R_load_phA,R_load_phB,R_load_phC;
+float sc_position;
+float sc_phase;
+float trans_resistance;
+float positive_seq_R_start_value;
+float positive_seq_L_start_value;
+float zero_seq_R_start_value;
+float zero_seq_L_start_value;
+float positive_seq_R_set;
+float positive_seq_L_set;
+float zero_seq_R_set;
+float zero_seq_L_set;
+
+float zero_seq_L_S1;
+float zero_seq_L_S2; 
+float zero_seq_R_S1;
+float zero_seq_R_S2;
+float positive_seq_L_S1;
+float positive_seq_L_S2;
+float positive_seq_R_S1;
+float positive_seq_R_S2;
+
+int idx;
+
+int load_exp_num;
+int sc_position_exp_num;
+int sc_phase_exp_num;
+int ef_mutual_angle_exp_num;
+int trans_resistance_int1_exp_num;
+int trans_resistance_int2_exp_num;
+int trans_resistance_int3_exp_num;
+int positive_seq_exp_num;
+int zero_seq_exp_num;
+
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+//----------------------------------------------------------------------------------- Функции ------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+void set_default_model_params(void) {
+
+	SetSlider "DraftVariables : L_load_A" = 2.346;
+	SetSlider "DraftVariables : L_load_B" = 2.525;
+	SetSlider "DraftVariables : L_load_C" = 2.4;
+	SetSlider "DraftVariables : R_load_A" = 300.0;
+	SetSlider "DraftVariables : R_load_B" = 400.0;
+	SetSlider "DraftVariables : R_load_C" = 410.0;
+
+	SetSlider "DraftVariables : R_transient" = 0.001;
+
+	SetSlider "DraftVariables : Place_CS" = 50.0;
+
+	SetSlider "Subsystem #1 : CTLs : Inputs : Phase_SC" = 0.0;
+
+	SetSlider "Subsystem #1 : Sources : S1 : Phase" = 0.0;
+
+	SetSlider "DraftVariables : L_Paralell_ES_ZS_S1" = 0.159811;
+	SetSlider "DraftVariables : L_Paralell_ES_ZS_S2" = 0.159811;
+	SetSlider "DraftVariables : R_Paralell_ES_ZS_S1" = 781.4467;
+	SetSlider "DraftVariables : R_Paralell_ES_ZS_S2" = 781.4467;
+
+	SetSlider "DraftVariables : L_Paralell_ES_PS_S1" = 0.222934;
+	SetSlider "DraftVariables : L_Paralell_ES_PS_S2" = 0.222934;
+	SetSlider "DraftVariables : R_Paralell_ES_PS_S1" = 3052.284;
+	SetSlider "DraftVariables : R_Paralell_ES_PS_S2" = 3052.284;
+
+}
+
+void set_model_params(float L_load_A, float L_load_B, float L_load_C, float R_load_A, float R_load_B, float R_load_C, float trans_resistance, float sc_position, float sc_phase, float ef_mutual_angle, 
+						float zero_seq_L_S1, float zero_seq_L_S2, float zero_seq_R_S1, float zero_seq_R_S2, 
+						float positive_seq_L_S1, float positive_seq_L_S2, float positive_seq_R_S1, float positive_seq_R_S2) {
+
+	SetSlider "DraftVariables : L_load_A" = L_load_A;
+	SetSlider "DraftVariables : L_load_B" = L_load_B;
+	SetSlider "DraftVariables : L_load_C" = L_load_C;
+	SetSlider "DraftVariables : R_load_A" = R_load_A;
+	SetSlider "DraftVariables : R_load_B" = R_load_B;
+	SetSlider "DraftVariables : R_load_C" = R_load_C;
+
+	SetSlider "DraftVariables : R_transient" = trans_resistance;
+
+	SetSlider "DraftVariables : Place_CS" = sc_position;
+
+	SetSlider "Subsystem #1 : CTLs : Inputs : Phase_SC" = sc_phase;
+
+	SetSlider "Subsystem #1 : Sources : S1 : Phase" = ef_mutual_angle;
+
+	SetSlider "DraftVariables : L_Paralell_ES_ZS_S1" = zero_seq_L_S1;
+	SetSlider "DraftVariables : L_Paralell_ES_ZS_S2" = zero_seq_L_S2;
+	SetSlider "DraftVariables : R_Paralell_ES_ZS_S1" = zero_seq_R_S1;
+	SetSlider "DraftVariables : R_Paralell_ES_ZS_S2" = zero_seq_R_S2;
+
+	SetSlider "DraftVariables : L_Paralell_ES_PS_S1" = positive_seq_L_S1;
+	SetSlider "DraftVariables : L_Paralell_ES_PS_S2" = positive_seq_L_S2;
+	SetSlider "DraftVariables : R_Paralell_ES_PS_S1" = positive_seq_R_S1;
+	SetSlider "DraftVariables : R_Paralell_ES_PS_S2" = positive_seq_R_S2;
+
+}
+
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------- Расчет недостающих параметров ------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+// Расчёт начальных значений и величин переменных
+
+// Начальные значения варьирования факторов
+
+positive_seq_R_start_value=positive_seq_finish_value / 100 * positive_seq_R; //??????????????????????????????????
+positive_seq_L_start_value=positive_seq_finish_value / 100 * positive_seq_L;
+
+zero_seq_R_start_value=zero_seq_finish_value / 100 * zero_seq_R;
+zero_seq_L_start_value=zero_seq_finish_value / 100 * zero_seq_L;
+
+// Количество экспериментов
+
+load_exp_num = floor(100 / load_step_change) + 1;
+sc_position_exp_num = floor((sc_position_finish_value - sc_position_start_value) / sc_position_step_change) + 1;
+sc_phase_exp_num = floor((sc_phase_finish_value - sc_phase_start_value) / sc_phase_step_change) + 1;
+ef_mutual_angle_exp_num = floor((ef_mutual_angle_finish_value - ef_mutual_angle_start_value) / ef_mutual_angle_step_change) + 1;
+trans_resistance_int1_exp_num = floor((trans_resistance_finish_value_int1 - trans_resistance_start_value_int1) / trans_resistance_step_change_int1) + 1;
+trans_resistance_int2_exp_num = floor((trans_resistance_finish_value_int2 - trans_resistance_start_value_int2) / trans_resistance_step_change_int2) + 1;
+trans_resistance_int3_exp_num = floor((trans_resistance_finish_value_int3 - trans_resistance_start_value_int3) / trans_resistance_step_change_int3) + 1;
+positive_seq_exp_num = 40; //!!!!!!!!!!!!!!!!!
+zero_seq_exp_num = 40; //!!!!!!!!!!!!!!!!!!!!
+
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------- Циклы варьирования параметров ------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+//-------------------------------------------------------------------------------- Изменение нагрузки ----------------------------------------------------------------------------------
+
+if (variation_load == 1) {
+
+	set_default_model_params(); // Установка базисных параметров модели
+
+	for(idx=1;idx<=load_exp_num;idx++)
+	{
+
+		// Вычисление задаваемых значений
+		L_load_phA=L_phA_start_value + (idx - 1) * load_step_change * L_phA_finish_value / 100;
+		L_load_phA=L_phB_start_value + (idx - 1) * load_step_change * L_phB_finish_value / 100;
+		L_load_phA=L_phC_start_value + (idx - 1) * load_step_change * L_phC_finish_value / 100;
+
+		R_load_phA=R_phA_start_value + (idx - 1) * load_step_change * R_phA_finish_value / 100;
+		R_load_phA=R_phB_start_value + (idx - 1) * load_step_change * R_phB_finish_value / 100;
+		R_load_phA=R_phC_start_value + (idx - 1) * load_step_change * R_phC_finish_value / 100;
+
+		// Установка значений
+		SetSlider "DraftVariables : L_load_A" = L_load_phA;
+		SetSlider "DraftVariables : L_load_B" = L_load_phB;
+		SetSlider "DraftVariables : L_load_C" = L_load_phC;
+
+		SetSlider "DraftVariables : R_load_A" = R_load_phA;
+		SetSlider "DraftVariables : R_load_B" = R_load_phB;
+		SetSlider "DraftVariables : R_load_C" = R_load_phC;
+
+		Start; // Запуск моделирования
+
+		SetSwitch "Subsystem #1 : CTLs : Inputs : FLTA" = 1; // Установка типа замыкания (A-0)
+
+		ArmExternalTrigger true; // Обновление экрана по внешнему тригеру
+
+		SavePlotToCSV "Subsystem #1|PMU|PMU1","results\PMU_data_load_exp"::itoa(idx)::".csv"; // Запись СВИ
+		SavePlotToCSV "Subsystem #1","results\IV_data_load_exp"::itoa(idx)::".csv"; //Запись первичных величин тока и напряжения
+		SavePlotToCSV "Subsystem #1|CTs","results\SVC_data_load_exp"::itoa(idx)::".csv"; //Запись вторичных величин тока
+
+		SetSwitch "Subsystem #1 : CTLs : Inputs : FLTA" = 0;
+
+		Stop; //Остановка модели
+	}
+
+}
+
+//-------------------------------------------------------------------------------- Изменение положения КЗ ----------------------------------------------------------------------------
+
+if (variation_sc_position == 1) {
+
+	set_default_model_params(); // Установка базисных параметров модели
+
+	for(idx=1;idx<=sc_position_exp_num;idx++)
+	{
+
+		// Вычисление задаваемых значений
+		sc_position = sc_position_start_value + (idx - 1) * sc_position_step_change;
+
+		// Установка значений
+		SetSlider "DraftVariables : Place_CS" = sc_position;
+
+		Start; // Запуск моделирования
+
+		SetSwitch "Subsystem #1 : CTLs : Inputs : FLTA" = 1; // Установка типа замыкания (A-0)
+
+		ArmExternalTrigger true; // Обновление экрана по внешнему тригеру
+
+		SavePlotToCSV "Subsystem #1|PMU|PMU1","results\PMU_data_sc_position_exp"::itoa(idx)::".csv"; // Запись СВИ
+		SavePlotToCSV "Subsystem #1","results\IV_data_sc_position_exp"::itoa(idx)::".csv"; //Запись первичных величин тока и напряжения
+		SavePlotToCSV "Subsystem #1|CTs","results\SVC_data_sc_position_exp"::itoa(idx)::".csv"; //Запись вторичных величин тока
+
+		SetSwitch "Subsystem #1 : CTLs : Inputs : FLTA" = 0;
+
+		Stop; //Остановка модели
+	}
+
+}
+
+//----------------------------------------------------------------------------------- Изменение фазы КЗ ------------------------------------------------------------------------------
+
+if (variation_sc_phase == 1) {
+
+	set_default_model_params(); // Установка базисных параметров модели
+
+	for(idx=1;idx<=sc_phase_exp_num;idx++)
+	{
+
+		// Вычисление задаваемых значений
+		sc_phase = sc_phase_start_value + (idx - 1) * sc_phase_step_change;
+
+		// Установка значений
+		SetSlider "Subsystem #1 : CTLs : Inputs : Phase_SC" = sc_phase;
+
+		Start; // Запуск моделирования
+
+		SetSwitch "Subsystem #1 : CTLs : Inputs : FLTA" = 1; // Установка типа замыкания (A-0)
+
+		ArmExternalTrigger true; // Обновление экрана по внешнему тригеру
+
+		SavePlotToCSV "Subsystem #1|PMU|PMU1","results\PMU_data_sc_phase_exp"::itoa(idx)::".csv"; // Запись СВИ
+		SavePlotToCSV "Subsystem #1","results\IV_data_sc_phase_exp"::itoa(idx)::".csv"; //Запись первичных величин тока и напряжения
+		SavePlotToCSV "Subsystem #1|CTs","results\SVC_data_sc_phase_exp"::itoa(idx)::".csv"; //Запись вторичных величин тока
+
+		SetSwitch "Subsystem #1 : CTLs : Inputs : FLTA" = 0;
+
+		Stop; //Остановка модели
+	}
+
+}
+
+//------------------------------------------------------------------------------ Изменение взаимного угла ЭДС ------------------------------------------------------------------------
+
+if (variation_ef_mutual_angle == 1) {
+
+	set_default_model_params(); // Установка базисных параметров модели
+
+	for(idx=1;idx<=ef_mutual_angle_exp_num;idx++)
+	{
+
+		// Вычисление задаваемых значений
+		ef_mutual_angle = ef_mutual_angle_start_value + (idx - 1) * ef_mutual_angle_step_change;
+
+		// Установка значений
+		SetSlider "Subsystem #1 : Sources : S1 : Phase" = ef_mutual_angle;
+
+		Start; // Запуск моделирования
+
+		SetSwitch "Subsystem #1 : CTLs : Inputs : FLTA" = 1; // Установка типа замыкания (A-0)
+
+		ArmExternalTrigger true; // Обновление экрана по внешнему тригеру
+
+		SavePlotToCSV "Subsystem #1|PMU|PMU1","results\PMU_data_ef_mutual_angle_exp"::itoa(idx)::".csv"; // Запись СВИ
+		SavePlotToCSV "Subsystem #1","results\IV_data_ef_mutual_angle_exp"::itoa(idx)::".csv"; //Запись первичных величин тока и напряжения
+		SavePlotToCSV "Subsystem #1|CTs","results\SVC_data_ef_mutual_angle_exp"::itoa(idx)::".csv"; //Запись вторичных величин тока
+
+		SetSwitch "Subsystem #1 : CTLs : Inputs : FLTA" = 0;
+
+		Stop; //Остановка модели
+	}
+
+}
+
+//--------------------------------------------------------------------------- Изменение переходного сопротивления --------------------------------------------------------------------
+
+if (variation_trans_resistance == 1) {
+
+	set_default_model_params(); // Установка базисных параметров модели
+
+	for(idx=1;idx<=trans_resistance_int1_exp_num;idx++)
+	{
+
+		// Вычисление задаваемых значений
+		trans_resistance  = trans_resistance_start_value_int1 + (idx - 1) * trans_resistance_step_change_int1;
+
+		// Установка значений
+		SetSlider "DraftVariables : R_transient" = trans_resistance;
+
+		Start; // Запуск моделирования
+
+		SetSwitch "Subsystem #1 : CTLs : Inputs : FLTA" = 1; // Установка типа замыкания (A-0)
+
+		ArmExternalTrigger true; // Обновление экрана по внешнему тригеру
+
+		SavePlotToCSV "Subsystem #1|PMU|PMU1","results\PMU_data_trans_resistance_exp"::itoa(idx)::".csv"; // Запись СВИ
+		SavePlotToCSV "Subsystem #1","results\IV_data_trans_resistance_exp"::itoa(idx)::".csv"; //Запись первичных величин тока и напряжения
+		SavePlotToCSV "Subsystem #1|CTs","results\SVC_data_trans_resistance_exp"::itoa(idx)::".csv"; //Запись вторичных величин тока
+
+		SetSwitch "Subsystem #1 : CTLs : Inputs : FLTA" = 0;
+
+		Stop; //Остановка модели
+	}
+
+	for(idx=1;idx<=trans_resistance_int2_exp_num;idx++)
+	{
+
+		// Вычисление задаваемых значений
+		trans_resistance  = trans_resistance_start_value_int2 + (idx - 1) * trans_resistance_step_change_int2;
+
+		// Установка значений
+		SetSlider "DraftVariables : R_transient" = trans_resistance;
+
+		Start; // Запуск моделирования
+
+		SetSwitch "Subsystem #1 : CTLs : Inputs : FLTA" = 1; // Установка типа замыкания (A-0)
+
+		ArmExternalTrigger true; // Обновление экрана по внешнему тригеру
+
+		SavePlotToCSV "Subsystem #1|PMU|PMU1","results\PMU_data_trans_resistance_exp"::itoa(idx+trans_resistance_int1_exp_num)::".csv"; // Запись СВИ
+		SavePlotToCSV "Subsystem #1","results\IV_data_trans_resistance_exp"::itoa(idx+trans_resistance_int1_exp_num)::".csv"; //Запись первичных величин тока и напряжения
+		SavePlotToCSV "Subsystem #1|CTs","results\SVC_data_trans_resistance_exp"::itoa(idx+trans_resistance_int1_exp_num)::".csv"; //Запись вторичных величин тока
+
+		SetSwitch "Subsystem #1 : CTLs : Inputs : FLTA" = 0;
+
+		Stop; //Остановка модели
+	}
+
+	for(idx=1;idx<=trans_resistance_int3_exp_num;idx++)
+	{
+
+		// Вычисление задаваемых значений
+		trans_resistance  = trans_resistance_start_value_int3 + (idx - 1) * trans_resistance_step_change_int3;
+
+		// Установка значений
+		SetSlider "DraftVariables : R_transient" = trans_resistance;
+
+		Start; // Запуск моделирования
+
+		SetSwitch "Subsystem #1 : CTLs : Inputs : FLTA" = 1; // Установка типа замыкания (A-0)
+
+		ArmExternalTrigger true; // Обновление экрана по внешнему тригеру
+
+		SavePlotToCSV "Subsystem #1|PMU|PMU1","results\PMU_data_trans_resistance_exp"::itoa(idx+trans_resistance_int1_exp_num+trans_resistance_int2_exp_num)::".csv"; // Запись СВИ
+		SavePlotToCSV "Subsystem #1","results\IV_data_trans_resistance_exp"::itoa(idx+trans_resistance_int1_exp_num+trans_resistance_int1_exp_num)::".csv"; //Запись первичных величин тока и напряжения
+		SavePlotToCSV "Subsystem #1|CTs","results\SVC_data_trans_resistance_exp"::itoa(idx+trans_resistance_int1_exp_num+trans_resistance_int1_exp_num)::".csv"; //Запись вторичных величин тока
+
+		SetSwitch "Subsystem #1 : CTLs : Inputs : FLTA" = 0;
+
+		Stop; //Остановка модели
+	}
+
+}
+
+//--------------------------------------------------------------- Отношение сопротивления ПП системы справа к системе слева ----------------------------------------------------------
+
+if (variation_positive_seq == 1) {
+
+	set_default_model_params(); // Установка базисных параметров модели
+
+	for(idx=1;idx<=positive_seq_exp_num;idx++)
+	{
+
+		// Вычисление задаваемых значений
+		positive_seq_R_set=positive_seq_R_start_value + (idx - 1) * positive_seq_step_change * positive_seq_R;
+		positive_seq_L_set=positive_seq_L_start_value + (idx - 1) * positive_seq_step_change * positive_seq_L;
+
+		// Установка значений
+		SetSlider "DraftVariables : R_Paralell_ES_DS_S1" = positive_seq_R_set;
+		SetSlider "DraftVariables : L_Paralell_ES_DS_S1" = positive_seq_L_set;
+
+		Start; // Запуск моделирования
+
+		SetSwitch "Subsystem #1 : CTLs : Inputs : FLTA" = 1; // Установка типа замыкания (A-0)
+
+		ArmExternalTrigger true; // Обновление экрана по внешнему тригеру
+
+		SavePlotToCSV "Subsystem #1|PMU|PMU1","results\PMU_data_positive_seq_exp"::itoa(idx)::".csv"; // Запись СВИ
+		SavePlotToCSV "Subsystem #1","results\IV_data_positive_seq_exp"::itoa(idx)::".csv"; //Запись первичных величин тока и напряжения
+		SavePlotToCSV "Subsystem #1|CTs","results\SVC_data_positive_seq_exp"::itoa(idx)::".csv"; //Запись вторичных величин тока
+
+		SetSwitch "Subsystem #1 : CTLs : Inputs : FLTA" = 0;
+
+		Stop; //Остановка модели
+	}
+
+}
+
+//--------------------------------------------------------------- Отношение сопротивления НП системы справа к системе слева ----------------------------------------------------------
+
+if (variation_positive_seq == 1) {
+
+	set_default_model_params(); // Установка базисных параметров модели
+
+	for(idx=1;idx<=zero_seq_exp_num;idx++)
+	{
+
+		// Вычисление задаваемых значений
+		zero_seq_R_set=zero_seq_R_start_value + (idx - 1) * zero_seq_step_change * zero_seq_R;
+		zero_seq_L_set=zero_seq_L_start_value + (idx - 1) * zero_seq_step_change * zero_seq_L;
+
+		// Установка значений
+		SetSlider "DraftVariables : L_Paralell_ES_ZS_S1" = zero_seq_R_set;
+		SetSlider "DraftVariables : R_Paralell_ES_ZS_S2" = zero_seq_L_set;
+
+		Start; // Запуск моделирования
+
+		SetSwitch "Subsystem #1 : CTLs : Inputs : FLTA" = 1; // Установка типа замыкания (A-0)
+
+		ArmExternalTrigger true; // Обновление экрана по внешнему тригеру
+
+		SavePlotToCSV "Subsystem #1|PMU|PMU1","results\PMU_data_zero_seq_exp"::itoa(idx)::".csv"; // Запись СВИ
+		SavePlotToCSV "Subsystem #1","results\IV_data_zero_seq_exp"::itoa(idx)::".csv"; //Запись первичных величин тока и напряжения
+		SavePlotToCSV "Subsystem #1|CTs","results\SVC_data_zero_seq_exp"::itoa(idx)::".csv"; //Запись вторичных величин тока
+
+		SetSwitch "Subsystem #1 : CTLs : Inputs : FLTA" = 0;
+
+		Stop; //Остановка модели
+	}
+
+}
+
+//-------------------------------------------------------------------- Варьирование параметров по методу Монте-Карло ----------------------------------------------------------------
+
+if (variation_Monte_Carlo == 1) {
+
+	for(idx=1;idx<=Monte_Carlo_exp_num;idx++)
+		{
+
+		// Вычисление задаваемых значений
+		L_load_phA = (rand() * (floor(L_phA_finish_value*Monte_Carlo_precision)-floor(L_phA_start_value*Monte_Carlo_precision)+1) + floor(L_phA_start_value*Monte_Carlo_precision)) / Monte_Carlo_precision; 
+		L_load_phB = (rand() * (floor(L_phB_finish_value*Monte_Carlo_precision)-floor(L_phB_start_value*Monte_Carlo_precision)+1) + floor(L_phB_start_value*Monte_Carlo_precision)) / Monte_Carlo_precision;
+		L_load_phC = (rand() * (floor(L_phC_finish_value*Monte_Carlo_precision)-floor(L_phC_start_value*Monte_Carlo_precision)+1) + floor(L_phC_start_value*Monte_Carlo_precision)) / Monte_Carlo_precision;
+		R_load_phA = (rand() * (floor(R_phA_finish_value*Monte_Carlo_precision)-floor(R_phA_start_value*Monte_Carlo_precision)+1) + floor(R_phA_start_value*Monte_Carlo_precision)) / Monte_Carlo_precision;
+		R_load_phB = (rand() * (floor(R_phB_finish_value*Monte_Carlo_precision)-floor(R_phB_start_value*Monte_Carlo_precision)+1) + floor(R_phB_start_value*Monte_Carlo_precision)) / Monte_Carlo_precision;
+		R_load_phC = (rand() * (floor(R_phC_finish_value*Monte_Carlo_precision)-floor(R_phC_start_value*Monte_Carlo_precision)+1) + floor(R_phC_start_value*Monte_Carlo_precision)) / Monte_Carlo_precision;
+		sc_position = (rand() * (floor(sc_position_finish_value*Monte_Carlo_precision)-floor(sc_position_start_value*Monte_Carlo_precision)+1) + floor(sc_position_start_value*Monte_Carlo_precision)) / Monte_Carlo_precision;
+		sc_phase = (rand() * (floor(sc_phase_finish_value*Monte_Carlo_precision)-floor(sc_phase_start_value*Monte_Carlo_precision)+1) + floor(sc_phase_start_value*Monte_Carlo_precision)) / Monte_Carlo_precision;
+		ef_mutual_angle = (rand() * (floor(ef_mutual_angle_finish_value*Monte_Carlo_precision)-floor(ef_mutual_angle_start_value*Monte_Carlo_precision)+1) + floor(ef_mutual_angle_start_value*Monte_Carlo_precision)) / Monte_Carlo_precision;
+		trans_resistance = (rand() * (floor(trans_resistance_finish_value_int3*Monte_Carlo_precision)-floor(trans_resistance_start_value_int1*Monte_Carlo_precision)+1) + floor(trans_resistance_start_value_int1*Monte_Carlo_precision)) / Monte_Carlo_precision;
+				
+		zero_seq_L_S1 = ;
+		zero_seq_L_S2 =; 
+		zero_seq_R_S1 =;
+		zero_seq_R_S2 =;
+		positive_seq_L_S1 = ;
+		positive_seq_L_S2 =;
+		positive_seq_R_S1 =;
+		positive_seq_R_S2 =;
+
+		// Установка значений
+		set_model_params(L_load_phA, L_load_phB, L_load_phC, R_load_phA, R_load_phB, R_load_phC, trans_resistance, sc_position, sc_phase, ef_mutual_angle,
+						zero_seq_L_S1, zero_seq_L_S2, zero_seq_R_S1, zero_seq_R_S2, 
+						positive_seq_L_S1, positive_seq_L_S2, positive_seq_R_S1, positive_seq_R_S2);
+
+		Start; // Запуск моделирования
+
+		SetSwitch "Subsystem #1 : CTLs : Inputs : FLTA" = 1; // Установка типа замыкания (A-0)
+
+		ArmExternalTrigger true; // Обновление экрана по внешнему тригеру
+
+		SavePlotToCSV "Subsystem #1|PMU|PMU1","results\PMU_data_Monte_Carlo_exp"::itoa(idx)::".csv"; // Запись СВИ
+		SavePlotToCSV "Subsystem #1","results\IV_data_Monte_Carlo_exp"::itoa(idx)::".csv"; //Запись первичных величин тока и напряжения
+		SavePlotToCSV "Subsystem #1|CTs","results\SVC_Monte_Carlo_seq_exp"::itoa(idx)::".csv"; //Запись вторичных величин тока
+
+		SetSwitch "Subsystem #1 : CTLs : Inputs : FLTA" = 0;
+
+		Stop; //Остановка модели
+		}
+
+}
