@@ -61,12 +61,12 @@ float trans_resistance_step_change_int3=10;
 
 float positive_seq_R=3052.2848;
 float positive_seq_L=0.222934058;
-float positive_seq_finish_value=20;
+float positive_seq_finish_value=2;
 float positive_seq_step_change=0.1;
 
 float zero_seq_R=781.4467;
 float zero_seq_L=0.159811616;
-float zero_seq_finish_value=40;
+float zero_seq_finish_value=4;
 float zero_seq_step_change=0.1;
 
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
