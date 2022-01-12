@@ -6,12 +6,12 @@
 
 // Задание на расчет
 
-int variation_load = 1;
-int variation_sc_position = 1;
-int variation_sc_phase = 1;
-int variation_ef_mutual_angle =1;
-int variation_trans_resistance = 1;
-int variation_positive_seq = 1;
+int variation_load = 0;
+int variation_sc_position = 0;
+int variation_sc_phase = 0;
+int variation_ef_mutual_angle =0;
+int variation_trans_resistance = 0;
+int variation_positive_seq = 0;
 int variation_zero_seq = 1;
 //int variation_Monte_Carlo = 0;
 //int Monte_Carlo_exp_num = 100;
@@ -203,8 +203,8 @@ positive_seq_L_finish_value=positive_seq_finish_value * positive_seq_L;
 zero_seq_R_start_value=0+zero_seq_step_change * zero_seq_R;
 zero_seq_L_start_value=0+zero_seq_step_change * zero_seq_L;
 
-zero_seq_R_finish_value=zero_seq_finish_value * positive_seq_R; 
-zero_seq_L_finish_value=zero_seq_finish_value * positive_seq_L;
+zero_seq_R_finish_value=zero_seq_finish_value * zero_seq_R; 
+zero_seq_L_finish_value=zero_seq_finish_value * zero_seq_L;
 
 // Количество экспериментов
 
@@ -215,8 +215,8 @@ ef_mutual_angle_exp_num = floor((ef_mutual_angle_finish_value - ef_mutual_angle_
 trans_resistance_int1_exp_num = floor((trans_resistance_finish_value_int1 - trans_resistance_start_value_int1) / trans_resistance_step_change_int1) + 1;
 trans_resistance_int2_exp_num = floor((trans_resistance_finish_value_int2 - trans_resistance_start_value_int2) / trans_resistance_step_change_int2) + 1;
 trans_resistance_int3_exp_num = floor((trans_resistance_finish_value_int3 - trans_resistance_start_value_int3) / trans_resistance_step_change_int3) + 1;
-positive_seq_exp_num = (positive_seq_R_finish_value-positive_seq_R_start_value)/positive_seq_step_change+1; 
-zero_seq_exp_num = (zero_seq_R_finish_value-zero_seq_R_start_value)/zero_seq_step_change+1;
+positive_seq_exp_num = floor((positive_seq_R_finish_value-positive_seq_R_start_value)/(positive_seq_step_change * positive_seq_R))+1; 
+zero_seq_exp_num = floor((zero_seq_R_finish_value-zero_seq_R_start_value)/(zero_seq_step_change * zero_seq_R))+1;
 
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 //------------------------------------------------------------------------- Циклы варьирования параметров ------------------------------------------------------------------------------
