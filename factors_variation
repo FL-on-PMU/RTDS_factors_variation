@@ -6,16 +6,16 @@
 
 // Задание на расчет
 
-int variation_load = 0;
-int variation_sc_position = 0;
-int variation_sc_phase = 0;
-int variation_ef_mutual_angle = 0;
-int variation_trans_resistance = 0;
-int variation_positive_seq = 0;
+int variation_load = 1;
+int variation_sc_position = 1;
+int variation_sc_phase = 1;
+int variation_ef_mutual_angle =1;
+int variation_trans_resistance = 1;
+int variation_positive_seq = 1;
 int variation_zero_seq = 1;
-int variation_Monte_Carlo = 0;
-int Monte_Carlo_exp_num = 100;
-int Monte_Carlo_precision = 1000000;
+//int variation_Monte_Carlo = 0;
+//int Monte_Carlo_exp_num = 100;
+//int Monte_Carlo_precision = 1000000;
 
 // Входные параметры для варьирования нагрузки
 
@@ -149,7 +149,7 @@ function set_default_model_params()
 	SetSlider "DraftVariables : R_Paralell_ES_PS_S1" = 3052.284;
 	SetSlider "DraftVariables : R_Paralell_ES_PS_S2" = 3052.284;
 	
-	SetSwitch "Subsystem #1 : CTLs : Inputs : C_Breaker_of_Load_Ph_ABC" = 0;
+	SetSwitch "Subsystem #1 : CTLs : Inputs : C_Breaker_of_Load_Ph_ABC" = 1;
 	
 	return 0;
 }
@@ -279,7 +279,7 @@ if (variation_load == 1) {
 		SetSlider "DraftVariables : R_load_C" = R_load_phC;
 		
 		//Включение нагрузки
-		SetSwitch "Subsystem #1 : CTLs : Inputs : C_Breaker_of_Load_Ph_ABC" = 0;
+		SetSwitch "Subsystem #1 : CTLs : Inputs : C_Breaker_of_Load_Ph_ABC" = 1;
 
 		Start; // Запуск моделирования
 
