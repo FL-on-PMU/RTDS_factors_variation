@@ -24,8 +24,8 @@ float L_phA_finish_value=2.346, L_phB_finish_value=2.525, L_phC_finish_value=2.4
 float R_phA_start_value=0.001, R_phB_start_value=0.001, R_phC_start_value=0.001; // Ом
 float R_phA_finish_value=300, R_phB_finish_value=400, R_phC_finish_value=410;    // Ом
 float load_step_change=20; 												   // % процент
-float Load_percent_start_value = 10;									   // % процент
-float Load_percent_finish_value = 100;									   // % процент
+float load_percent_start_value = 10;									   // % процент
+float load_percent_finish_value = 100;									   // % процент
 
 // Входные параметры для варьирования места короткого замыкания
 
@@ -63,21 +63,24 @@ float trans_resistance_step_change_int3=10; // Ом
 
 float positive_seq_R=3052.2848;    // Ом
 float positive_seq_L=0.222934058;  // Ом
+float positive_seq_start_value=0.1;// о.е.
 float positive_seq_finish_value=2; // о.е.
 float positive_seq_step_change=0.1;// о.е.
 
-float zero_seq_R=781.4467;       // Ом
-float zero_seq_L=0.159811616;    // Ом
-float zero_seq_finish_value=4;   // о.е.
-float zero_seq_step_change=0.1;  // о.е.
-float positive_seq_S1_finish_value=100;// % процент
-float positive_seq_S2_finish_value=100;// % процент
-float positive_seq_S1_start_value=10;  // % процент
-float positive_seq_S2_start_value=10;  // % процент
-float zero_seq_S1_finish_value=100;	   // % процент
-float zero_seq_S2_finish_value=100;	   // % процент
-float zero_seq_S1_start_value=10;	   // % процент
-float zero_seq_S2_start_value=10;	   // % процент
+float zero_seq_R=781.4467;     // Ом
+float zero_seq_L=0.159811616;  // Ом
+float zero_seq_start_value=0.1;// о.е.
+float zero_seq_finish_value=4; // о.е.
+float zero_seq_step_change=0.1;// о.е.
+
+float positive_seq_S1_finish_value=1; // о.е.
+float positive_seq_S2_finish_value=1; // о.е.
+float positive_seq_S1_start_value=0.1;// о.е.
+float positive_seq_S2_start_value=0.1;// о.е.
+float zero_seq_S1_finish_value=1;	  // о.е.
+float zero_seq_S2_finish_value=1;	  // о.е.
+float zero_seq_S1_start_value=0.1;	  // о.е.
+float zero_seq_S2_start_value=0.1;	  // о.е.
 
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 //------------------------------------------------------------------------------- Объявление переменных --------------------------------------------------------------------------------
@@ -85,7 +88,7 @@ float zero_seq_S2_start_value=10;	   // % процент
 
 // Расчётные параметры
 
-float Load_percent;
+float load_percent;
 float L_load_phA,L_load_phB,L_load_phC;
 float R_load_phA,R_load_phB,R_load_phC;
 float sc_position;
@@ -197,6 +200,8 @@ function set_model_params(float L_load_A, float L_load_B, float L_load_C, float 
 	SetSlider "DraftVariables : R_Paralell_ES_PS_S1" = positive_seq_R_S1;
 	SetSlider "DraftVariables : R_Paralell_ES_PS_S2" = positive_seq_R_S2;
 	
+	SetSwitch "Subsystem #1 : CTLs : Inputs : C_Breaker_of_Load_Ph_ABC" = 1;
+	
 	return 0;
 
 }
@@ -209,14 +214,14 @@ function set_model_params(float L_load_A, float L_load_B, float L_load_C, float 
 
 // Начальные значения варьирования факторов
 
-positive_seq_R_start_value=0+positive_seq_step_change * positive_seq_R; 
-positive_seq_L_start_value=0+positive_seq_step_change * positive_seq_L;
+positive_seq_R_start_value=positive_seq_start_value * positive_seq_R; 
+positive_seq_L_start_value=positive_seq_start_value * positive_seq_L;
 
 positive_seq_R_finish_value=positive_seq_finish_value * positive_seq_R; 
 positive_seq_L_finish_value=positive_seq_finish_value * positive_seq_L;
 
-zero_seq_R_start_value=0+zero_seq_step_change * zero_seq_R;
-zero_seq_L_start_value=0+zero_seq_step_change * zero_seq_L;
+zero_seq_R_start_value=zero_seq_start_value * zero_seq_R;
+zero_seq_L_start_value=zero_seq_start_value * zero_seq_L;
 
 zero_seq_R_finish_value=zero_seq_finish_value * zero_seq_R; 
 zero_seq_L_finish_value=zero_seq_finish_value * zero_seq_L;
@@ -243,13 +248,9 @@ if (variation_load == 1) {
 
 	set_default_model_params(); // Установка базисных параметров модели
 	
-	if (Flag_load == 0)  {
-	
-	Flag_load=0;
+	Start;//Запуск моделирования
 	
 	idx=1;
-	
-	Start;//Запуск моделирования
 
 	//Отключение нагрузки
 	SetSwitch "Subsystem #1 : CTLs : Inputs : C_Breaker_of_Load_Ph_ABC" = 0;
@@ -267,10 +268,6 @@ if (variation_load == 1) {
 
 	//Остановка модели
 	Stop;
-	
-	}
-	
-	Flag_load=1;
 	
 	for(idx=2;idx<=load_exp_num;idx++)
 	{
@@ -564,44 +561,46 @@ if (variation_Monte_Carlo == 1)
 	for(idx=1;idx<=Monte_Carlo_exp_num;idx++)
 		{
 		
-		Load_percent = (rand(10000)* ((Load_percent_finish_value*1)-(Load_percent_start_value)) + (Load_percent_start_value*1)) / 1;
-		L_load_phA = Load_percent*L_phA_finish_value/100;
-		L_load_phB = Load_percent*L_phB_finish_value/100;
-		L_load_phC = Load_percent*L_phC_finish_value/100;
-		R_load_phA = Load_percent*R_phA_finish_value/100;
-		R_load_phB = Load_percent*R_phB_finish_value/100;
-		R_load_phC = Load_percent*R_phC_finish_value/100;
-		//L_load_phA = (rand(10000) * ((L_phA_finish_value*1)-(L_phA_start_value)) + (L_phA_start_value*1)) / 1; 
-		//L_load_phB = (rand(10000) * ((L_phB_finish_value*1)-(L_phB_start_value*1)) + (L_phB_start_value*1)) / 1;
-		//L_load_phC = (rand(10000) * ((L_phC_finish_value*1)-(L_phC_start_value*1)) + (L_phC_start_value*1)) / 1;
-		//R_load_phA = (rand(10000) * ((R_phA_finish_value*1)-(R_phA_start_value*1)) + (R_phA_start_value*1)) / 1;
-		//R_load_phB = (rand(10000) * ((R_phB_finish_value*1)-(R_phB_start_value*1)) + (R_phB_start_value*1)) / 1;
-		//R_load_phC = (rand(10000) * ((R_phC_finish_value*1)-(R_phC_start_value*1)) + (R_phC_start_value*1)) / 1;
-		sc_position = (rand(10000) * ((sc_position_finish_value*1)-(sc_position_start_value*1)) + (sc_position_start_value*1)) / 1;
-		sc_phase = (rand(10000) * ((sc_phase_finish_value*1)-(sc_phase_start_value*1)) + (sc_phase_start_value*1)) / 1;
-		ef_mutual_angle = (rand(10000) * ((ef_mutual_angle_finish_value*1)-(ef_mutual_angle_start_value*1)) + (ef_mutual_angle_start_value*1)) / 1;
-		trans_resistance = (rand(10000) * ((trans_resistance_finish_value_int3*1)-(trans_resistance_start_value_int1*1)) + (trans_resistance_start_value_int1*1)) / 1;
+		load_percent = (rand(10000)* ((load_percent_finish_value)-(load_percent_start_value)) + (load_percent_start_value));
+		L_load_phA = load_percent*L_phA_finish_value/100;
+		L_load_phB = load_percent*L_phB_finish_value/100;
+		L_load_phC = load_percent*L_phC_finish_value/100;
+		R_load_phA = load_percent*R_phA_finish_value/100;
+		R_load_phB = load_percent*R_phB_finish_value/100;
+		R_load_phC = load_percent*R_phC_finish_value/100;
+		sc_position = (rand(10000) * ((sc_position_finish_value)-(sc_position_start_value)) + (sc_position_start_value));
+		sc_phase = (rand(10000) * ((sc_phase_finish_value)-(sc_phase_start_value)) + (sc_phase_start_value));
+		ef_mutual_angle = (rand(10000) * ((ef_mutual_angle_finish_value)-(ef_mutual_angle_start_value)) + (ef_mutual_angle_start_value));
+		trans_resistance = (rand(10000) * ((trans_resistance_finish_value_int3)-(trans_resistance_start_value_int1)) + (trans_resistance_start_value_int1));
+		positive_seq_S1_percent = (rand(10000)* ((positive_seq_S1_finish_value)-(positive_seq_S1_start_value)) + (positive_seq_S1_start_value));	
+		zero_seq_S1_percent = (rand(10000)* ((zero_seq_S1_finish_value)-(zero_seq_S1_start_value)) + (zero_seq_S1_start_value));
+		positive_seq_S2_percent = (rand(10000)* ((positive_seq_S2_finish_value)-(positive_seq_S2_start_value)) + (positive_seq_S2_start_value));	
+		zero_seq_S2_percent = (rand(10000)* ((zero_seq_S2_finish_value)-(zero_seq_S2_start_value)) + (zero_seq_S2_start_value));
+		zero_seq_L_S1 = zero_seq_S1_percent*zero_seq_L_finish_value;
+		zero_seq_L_S2 = zero_seq_S2_percent*zero_seq_L_finish_value;
+		zero_seq_R_S1 = zero_seq_S1_percent*zero_seq_R_finish_value;
+		zero_seq_R_S2 = zero_seq_S2_percent*zero_seq_R_finish_value;
+		positive_seq_L_S1 = positive_seq_S1_percent*positive_seq_L_finish_value;
+		positive_seq_L_S2 = positive_seq_S2_percent*positive_seq_L_finish_value;
+		positive_seq_R_S1 = positive_seq_S1_percent*positive_seq_R_finish_value;
+		positive_seq_R_S2 = positive_seq_S2_percent*positive_seq_R_finish_value;
 		
-		positive_seq_S1_percent = (rand(10000)* ((positive_seq_S1_finish_value*1)-(positive_seq_S1_start_value)) + (positive_seq_S1_start_value*1)) / 1;	
-		zero_seq_S1_percent = (rand(10000)* ((zero_seq_S1_finish_value*1)-(zero_seq_S1_start_value)) + (zero_seq_S1_start_value*1)) / 1;
-		positive_seq_S2_percent = (rand(10000)* ((positive_seq_S2_finish_value*1)-(positive_seq_S2_start_value)) + (positive_seq_S2_start_value*1)) / 1;	
-		zero_seq_S2_percent = (rand(10000)* ((zero_seq_S2_finish_value*1)-(zero_seq_S2_start_value)) + (zero_seq_S2_start_value*1)) / 1;
-		zero_seq_L_S1 = zero_seq_S1_percent*zero_seq_L_finish_value/100;
-		zero_seq_L_S2 = zero_seq_S2_percent*zero_seq_L_finish_value/100;
-		zero_seq_R_S1 = zero_seq_S1_percent*zero_seq_R_finish_value/100;
-		zero_seq_R_S2 = zero_seq_S2_percent*zero_seq_R_finish_value/100;
-		positive_seq_L_S1 = positive_seq_S1_percent*positive_seq_L_finish_value/100;
-		positive_seq_L_S2 = positive_seq_S2_percent*positive_seq_L_finish_value/100;
-		positive_seq_R_S1 = positive_seq_S1_percent*positive_seq_R_finish_value/100;
-		positive_seq_R_S2 = positive_seq_S2_percent*positive_seq_R_finish_value/100;
-		//zero_seq_L_S1 = (rand(10000) * ((zero_seq_L_finish_value*1)-(zero_seq_L_start_value*1)) + (zero_seq_L_start_value*1)) / 1;
-		//zero_seq_L_S2 = (rand(10000) * ((zero_seq_L_finish_value*1)-(zero_seq_L_start_value*1)) + (zero_seq_L_start_value*1)) / 1;
-		//zero_seq_R_S1 = (rand(10000) * ((zero_seq_R_finish_value*1)-(zero_seq_R_start_value*1)) + (zero_seq_R_start_value*1)) / 1;
-		//zero_seq_R_S2 = (rand(10000) * ((zero_seq_R_finish_value*1)-(zero_seq_R_start_value*1)) + (zero_seq_R_start_value*1)) / 1;
-		//positive_seq_L_S1 = (rand(10000) * ((positive_seq_L_finish_value*1)-(positive_seq_L_start_value*1)) + (positive_seq_L_start_value*1)) / 1;
-		//positive_seq_L_S2 = (rand(10000) * ((positive_seq_L_finish_value*1)-(positive_seq_L_start_value*1)) + (positive_seq_L_start_value*1)) / 1;
-		//positive_seq_R_S1 = (rand(10000) * ((positive_seq_R_finish_value*1)-(positive_seq_R_start_value*1)) + (positive_seq_R_start_value*1)) / 1;
-		//positive_seq_R_S2 = (rand(10000) * ((positive_seq_R_finish_value*1)-(positive_seq_R_start_value*1)) + (positive_seq_R_start_value*1)) / 1;
+		//Вспомогательная часть, если нужно независимо изменять сопротивления в имитационной модели
+		
+		//zero_seq_L_S1 = (rand(10000) * ((zero_seq_L_finish_value)-(zero_seq_L_start_value)) + (zero_seq_L_start_value));
+		//zero_seq_L_S2 = (rand(10000) * ((zero_seq_L_finish_value)-(zero_seq_L_start_value)) + (zero_seq_L_start_value));
+		//zero_seq_R_S1 = (rand(10000) * ((zero_seq_R_finish_value)-(zero_seq_R_start_value)) + (zero_seq_R_start_value));
+		//zero_seq_R_S2 = (rand(10000) * ((zero_seq_R_finish_value)-(zero_seq_R_start_value)) + (zero_seq_R_start_value));
+		//positive_seq_L_S1 = (rand(10000) * ((positive_seq_L_finish_value)-(positive_seq_L_start_value)) + (positive_seq_L_start_value));
+		//positive_seq_L_S2 = (rand(10000) * ((positive_seq_L_finish_value)-(positive_seq_L_start_value)) + (positive_seq_L_start_value));
+		//positive_seq_R_S1 = (rand(10000) * ((positive_seq_R_finish_value)-(positive_seq_R_start_value)) + (positive_seq_R_start_value));
+		//positive_seq_R_S2 = (rand(10000) * ((positive_seq_R_finish_value)-(positive_seq_R_start_value)) + (positive_seq_R_start_value));
+		//L_load_phA = (rand(10000) * ((L_phA_finish_value)-(L_phA_start_value)) + (L_phA_start_value)); 
+		//L_load_phB = (rand(10000) * ((L_phB_finish_value)-(L_phB_start_value)) + (L_phB_start_value));
+		//L_load_phC = (rand(10000) * ((L_phC_finish_value)-(L_phC_start_value)) + (L_phC_start_value));
+		//R_load_phA = (rand(10000) * ((R_phA_finish_value)-(R_phA_start_value)) + (R_phA_start_value));
+		//R_load_phB = (rand(10000) * ((R_phB_finish_value)-(R_phB_start_value)) + (R_phB_start_value));
+		//R_load_phC = (rand(10000) * ((R_phC_finish_value)-(R_phC_start_value)) + (R_phC_start_value));
 
 		// Установка значений
 		set_model_params(L_load_phA, L_load_phB, L_load_phC, R_load_phA, R_load_phB, R_load_phC, trans_resistance, sc_position, sc_phase, ef_mutual_angle, zero_seq_L_S1, zero_seq_L_S2, zero_seq_R_S1, zero_seq_R_S2, positive_seq_L_S1, positive_seq_L_S2, positive_seq_R_S1, positive_seq_R_S2);
