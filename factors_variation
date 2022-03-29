@@ -13,9 +13,11 @@ int variation_ef_mutual_angle =0;
 int variation_trans_resistance = 0;
 int variation_positive_seq = 0;
 int variation_zero_seq = 0;
+int variation_frequence = 0;
 int variation_Monte_Carlo = 1;
-int Monte_Carlo_exp_num = 100;
+int Monte_Carlo_exp_num = 1000;
 int Monte_Carlo_precision = 1000000;
+int idx_Monte_Carlo=1;
 
 // Входные параметры для варьирования нагрузки
 
@@ -29,9 +31,9 @@ float load_percent_finish_value = 100;									   // % процент
 
 // Входные параметры для варьирования места короткого замыкания
 
-float sc_position_start_value=0;   // % процент
+float sc_position_start_value=8;   // % процент
 float sc_position_step_change=1;   // % процент
-float sc_position_finish_value=100;// % процент
+float sc_position_finish_value=92;// % процент
 
 // Входные параметры для варьирования угла КЗ 
  
@@ -82,6 +84,10 @@ float zero_seq_S2_finish_value=1;	  // о.е.
 float zero_seq_S1_start_value=0.1;	  // о.е.
 float zero_seq_S2_start_value=0.1;	  // о.е.
 
+float frequense_start=49.6; //
+float frequense_finish=50.4; //
+float frequense_step=0.05; //
+
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 //------------------------------------------------------------------------------- Объявление переменных --------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -95,6 +101,7 @@ float sc_position;
 float sc_phase;
 float ef_mutual_angle;
 float trans_resistance;
+float freq;
 float positive_seq_R_start_value;
 float positive_seq_L_start_value;
 float positive_seq_R_finish_value;
@@ -132,6 +139,7 @@ int trans_resistance_int2_exp_num;
 int trans_resistance_int3_exp_num;
 int positive_seq_exp_num;
 int zero_seq_exp_num;
+int frequence_exp_num;
 
 int Flag_load;
 
@@ -149,7 +157,7 @@ function set_default_model_params()
 	SetSlider "DraftVariables : R_load_B" = 400.0;
 	SetSlider "DraftVariables : R_load_C" = 410.0;
 
-	SetSlider "DraftVariables : R_transient" = 0.001;
+	SetSlider "DraftVariables : R_transient" = 10;
 
 	SetSlider "DraftVariables : Place_CS" = 50.0;
 
@@ -157,8 +165,8 @@ function set_default_model_params()
 
 	SetSlider "Subsystem #1 : Sources : S1 : Phase" = 0.0;
 
-	SetSlider "DraftVariables : L_Paralell_ES_ZS_S1" = 0.159811;
-	SetSlider "DraftVariables : L_Paralell_ES_ZS_S2" = 0.159811;
+	SetSlider "DraftVariables : L_Paralell_ES_ZS_S1" = 0.15981;
+	SetSlider "DraftVariables : L_Paralell_ES_ZS_S2" = 0.15981;
 	SetSlider "DraftVariables : R_Paralell_ES_ZS_S1" = 781.4467;
 	SetSlider "DraftVariables : R_Paralell_ES_ZS_S2" = 781.4467;
 
@@ -166,6 +174,10 @@ function set_default_model_params()
 	SetSlider "DraftVariables : L_Paralell_ES_PS_S2" = 0.222934;
 	SetSlider "DraftVariables : R_Paralell_ES_PS_S1" = 3052.284;
 	SetSlider "DraftVariables : R_Paralell_ES_PS_S2" = 3052.284;
+
+	SetSlider "Subsystem #1 : Sources : S1 : Freq" = 50.0;
+	SetSlider "Subsystem #1 : Sources : S2 : Freq" = 50.0;
+
 	
 	SetSwitch "Subsystem #1 : CTLs : Inputs : C_Breaker_of_Load_Ph_ABC" = 1;
 	
@@ -199,7 +211,7 @@ function set_model_params(float L_load_A, float L_load_B, float L_load_C, float 
 	SetSlider "DraftVariables : L_Paralell_ES_PS_S2" = positive_seq_L_S2;
 	SetSlider "DraftVariables : R_Paralell_ES_PS_S1" = positive_seq_R_S1;
 	SetSlider "DraftVariables : R_Paralell_ES_PS_S2" = positive_seq_R_S2;
-	
+
 	SetSwitch "Subsystem #1 : CTLs : Inputs : C_Breaker_of_Load_Ph_ABC" = 1;
 	
 	return 0;
@@ -237,6 +249,8 @@ trans_resistance_int2_exp_num = floor((trans_resistance_finish_value_int2 - tran
 trans_resistance_int3_exp_num = floor((trans_resistance_finish_value_int3 - trans_resistance_start_value_int3) / trans_resistance_step_change_int3) + 1;
 positive_seq_exp_num = floor((positive_seq_R_finish_value-positive_seq_R_start_value)/(positive_seq_step_change * positive_seq_R))+1; 
 zero_seq_exp_num = floor((zero_seq_R_finish_value-zero_seq_R_start_value)/(zero_seq_step_change * zero_seq_R))+1;
+frequence_exp_num= floor((frequense_finish - frequense_start) / frequense_step) + 1;
+
 
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 //------------------------------------------------------------------------- Циклы варьирования параметров ------------------------------------------------------------------------------
@@ -262,7 +276,7 @@ if (variation_load == 1) {
 
 	SavePlotToCSV "Subsystem #1|PMU|PMU1","results\PMU_data_load_exp"::itoa(idx)::".csv"; // Запись СВИ
 	SavePlotToCSV "Subsystem #1","results\IV_data_load_exp"::itoa(idx)::".csv"; //Запись первичных величин тока и напряжения
-	SavePlotToCSV "Subsystem #1|CTs","results\SVC_data_load_exp"::itoa(idx)::".csv"; //Запись вторичных величин тока
+	//SavePlotToCSV "Subsystem #1|CTs","results\SVC_data_load_exp"::itoa(idx)::".csv"; //Запись вторичных величин тока
 
 	SetSwitch "Subsystem #1 : CTLs : Inputs : FLTA" = 0;
 
@@ -301,7 +315,40 @@ if (variation_load == 1) {
 
 		SavePlotToCSV "Subsystem #1|PMU|PMU1","results\PMU_data_load_exp"::itoa(idx)::".csv"; // Запись СВИ
 		SavePlotToCSV "Subsystem #1","results\IV_data_load_exp"::itoa(idx)::".csv"; //Запись первичных величин тока и напряжения
-		SavePlotToCSV "Subsystem #1|CTs","results\SVC_data_load_exp"::itoa(idx)::".csv"; //Запись вторичных величин тока
+		//SavePlotToCSV "Subsystem #1|CTs","results\SVC_data_load_exp"::itoa(idx)::".csv"; //Запись вторичных величин тока
+
+		SetSwitch "Subsystem #1 : CTLs : Inputs : FLTA" = 0;
+
+		Stop; //Остановка модели
+	}
+
+}
+
+//-------------------------------------------------------------------------------- 0000� ----------------------------------------------------------------------------
+
+if (variation_frequence == 1) {
+
+	set_default_model_params(); // Установка базисных параметров модели
+
+	for(idx=1;idx<=frequence_exp_num;idx++)
+	{
+
+		// Вычисление задаваемых значений
+		freq= frequense_start+ (idx - 1) * frequense_step;
+
+		// Установка значений
+		SetSlider "Subsystem #1 : Sources : S1 : Freq" = freq;
+		SetSlider "Subsystem #1 : Sources : S2 : Freq" = freq;
+
+		Start; // Запуск моделирования
+
+		SetSwitch "Subsystem #1 : CTLs : Inputs : FLTA" = 1; // Установка типа замыкания (A-0)
+
+		ArmExternalTrigger true; // Обновление экрана по внешнему тригеру
+
+		SavePlotToCSV "Subsystem #1|PMU|PMU1","results\PMU_data_freq_exp"::itoa(idx)::".csv"; // Запись СВИ
+		SavePlotToCSV "Subsystem #1","results\IV_data_freq_exp"::itoa(idx)::".csv"; //Запись первичных величин тока и напряжения
+		//SavePlotToCSV "Subsystem #1|CTs","results\SVC_data_freq_exp"::itoa(idx)::".csv"; //Запись вторичных величин тока
 
 		SetSwitch "Subsystem #1 : CTLs : Inputs : FLTA" = 0;
 
@@ -333,7 +380,7 @@ if (variation_sc_position == 1) {
 
 		SavePlotToCSV "Subsystem #1|PMU|PMU1","results\PMU_data_sc_position_exp"::itoa(idx)::".csv"; // Запись СВИ
 		SavePlotToCSV "Subsystem #1","results\IV_data_sc_position_exp"::itoa(idx)::".csv"; //Запись первичных величин тока и напряжения
-		SavePlotToCSV "Subsystem #1|CTs","results\SVC_data_sc_position_exp"::itoa(idx)::".csv"; //Запись вторичных величин тока
+		//SavePlotToCSV "Subsystem #1|CTs","results\SVC_data_sc_position_exp"::itoa(idx)::".csv"; //Запись вторичных величин тока
 
 		SetSwitch "Subsystem #1 : CTLs : Inputs : FLTA" = 0;
 
@@ -365,7 +412,7 @@ if (variation_sc_phase == 1) {
 
 		SavePlotToCSV "Subsystem #1|PMU|PMU1","results\PMU_data_sc_phase_exp"::itoa(idx)::".csv"; // Запись СВИ
 		SavePlotToCSV "Subsystem #1","results\IV_data_sc_phase_exp"::itoa(idx)::".csv"; //Запись первичных величин тока и напряжения
-		SavePlotToCSV "Subsystem #1|CTs","results\SVC_data_sc_phase_exp"::itoa(idx)::".csv"; //Запись вторичных величин тока
+		//SavePlotToCSV "Subsystem #1|CTs","results\SVC_data_sc_phase_exp"::itoa(idx)::".csv"; //Запись вторичных величин тока
 
 		SetSwitch "Subsystem #1 : CTLs : Inputs : FLTA" = 0;
 
@@ -397,7 +444,7 @@ if (variation_ef_mutual_angle == 1) {
 
 		SavePlotToCSV "Subsystem #1|PMU|PMU1","results\PMU_data_ef_mutual_angle_exp"::itoa(idx)::".csv"; // Запись СВИ
 		SavePlotToCSV "Subsystem #1","results\IV_data_ef_mutual_angle_exp"::itoa(idx)::".csv"; //Запись первичных величин тока и напряжения
-		SavePlotToCSV "Subsystem #1|CTs","results\SVC_data_ef_mutual_angle_exp"::itoa(idx)::".csv"; //Запись вторичных величин тока
+		//SavePlotToCSV "Subsystem #1|CTs","results\SVC_data_ef_mutual_angle_exp"::itoa(idx)::".csv"; //Запись вторичных величин тока
 
 		SetSwitch "Subsystem #1 : CTLs : Inputs : FLTA" = 0;
 
@@ -429,7 +476,7 @@ if (variation_trans_resistance == 1) {
 
 		SavePlotToCSV "Subsystem #1|PMU|PMU1","results\PMU_data_trans_resistance_exp"::itoa(idx)::".csv"; // Запись СВИ
 		SavePlotToCSV "Subsystem #1","results\IV_data_trans_resistance_exp"::itoa(idx)::".csv"; //Запись первичных величин тока и напряжения
-		SavePlotToCSV "Subsystem #1|CTs","results\SVC_data_trans_resistance_exp"::itoa(idx)::".csv"; //Запись вторичных величин тока
+		//SavePlotToCSV "Subsystem #1|CTs","results\SVC_data_trans_resistance_exp"::itoa(idx)::".csv"; //Запись вторичных величин тока
 
 		SetSwitch "Subsystem #1 : CTLs : Inputs : FLTA" = 0;
 
@@ -453,7 +500,7 @@ if (variation_trans_resistance == 1) {
 
 		SavePlotToCSV "Subsystem #1|PMU|PMU1","results\PMU_data_trans_resistance_exp"::itoa(idx+trans_resistance_int1_exp_num)::".csv"; // Запись СВИ
 		SavePlotToCSV "Subsystem #1","results\IV_data_trans_resistance_exp"::itoa(idx+trans_resistance_int1_exp_num)::".csv"; //Запись первичных величин тока и напряжения
-		SavePlotToCSV "Subsystem #1|CTs","results\SVC_data_trans_resistance_exp"::itoa(idx+trans_resistance_int1_exp_num)::".csv"; //Запись вторичных величин тока
+		//SavePlotToCSV "Subsystem #1|CTs","results\SVC_data_trans_resistance_exp"::itoa(idx+trans_resistance_int1_exp_num)::".csv"; //Запись вторичных величин тока
 
 		SetSwitch "Subsystem #1 : CTLs : Inputs : FLTA" = 0;
 
@@ -477,7 +524,7 @@ if (variation_trans_resistance == 1) {
 
 		SavePlotToCSV "Subsystem #1|PMU|PMU1","results\PMU_data_trans_resistance_exp"::itoa(idx+trans_resistance_int1_exp_num+trans_resistance_int2_exp_num)::".csv"; // Запись СВИ
 		SavePlotToCSV "Subsystem #1","results\IV_data_trans_resistance_exp"::itoa(idx+trans_resistance_int1_exp_num+trans_resistance_int1_exp_num)::".csv"; //Запись первичных величин тока и напряжения
-		SavePlotToCSV "Subsystem #1|CTs","results\SVC_data_trans_resistance_exp"::itoa(idx+trans_resistance_int1_exp_num+trans_resistance_int1_exp_num)::".csv"; //Запись вторичных величин тока
+		//SavePlotToCSV "Subsystem #1|CTs","results\SVC_data_trans_resistance_exp"::itoa(idx+trans_resistance_int1_exp_num+trans_resistance_int1_exp_num)::".csv"; //Запись вторичных величин тока
 
 		SetSwitch "Subsystem #1 : CTLs : Inputs : FLTA" = 0;
 
@@ -508,10 +555,11 @@ if (variation_positive_seq == 1) {
 		SetSwitch "Subsystem #1 : CTLs : Inputs : FLTA" = 1; // Установка типа замыкания (A-0)
 
 		ArmExternalTrigger true; // Обновление экрана по внешнему тригеру
-
+		
+		fprintf(SC_position.CSV, "%s%s\n",sc_position,",");
 		SavePlotToCSV "Subsystem #1|PMU|PMU1","results\PMU_data_positive_seq_exp"::itoa(idx)::".csv"; // Запись СВИ
 		SavePlotToCSV "Subsystem #1","results\IV_data_positive_seq_exp"::itoa(idx)::".csv"; //Запись первичных величин тока и напряжения
-		SavePlotToCSV "Subsystem #1|CTs","results\SVC_data_positive_seq_exp"::itoa(idx)::".csv"; //Запись вторичных величин тока
+		//SavePlotToCSV "Subsystem #1|CTs","results\SVC_data_positive_seq_exp"::itoa(idx)::".csv"; //Запись вторичных величин тока
 
 		SetSwitch "Subsystem #1 : CTLs : Inputs : FLTA" = 0;
 
@@ -545,7 +593,7 @@ if (variation_zero_seq == 1) {
 
 		SavePlotToCSV "Subsystem #1|PMU|PMU1","results\PMU_data_zero_seq_exp"::itoa(idx)::".csv"; // Запись СВИ
 		SavePlotToCSV "Subsystem #1","results\IV_data_zero_seq_exp"::itoa(idx)::".csv"; //Запись первичных величин тока и напряжения
-		SavePlotToCSV "Subsystem #1|CTs","results\SVC_data_zero_seq_exp"::itoa(idx)::".csv"; //Запись вторичных величин тока
+		//SavePlotToCSV "Subsystem #1|CTs","results\SVC_data_zero_seq_exp"::itoa(idx)::".csv"; //Запись вторичных величин тока
 
 		SetSwitch "Subsystem #1 : CTLs : Inputs : FLTA" = 0;
 
@@ -558,7 +606,7 @@ if (variation_zero_seq == 1) {
 
 if (variation_Monte_Carlo == 1) 
 	{
-	for(idx=1;idx<=Monte_Carlo_exp_num;idx++)
+	for(idx=idx_Monte_Carlo;idx<=Monte_Carlo_exp_num;idx++)
 		{
 		
 		load_percent = (rand(10000)* ((load_percent_finish_value)-(load_percent_start_value)) + (load_percent_start_value));
@@ -569,7 +617,6 @@ if (variation_Monte_Carlo == 1)
 		R_load_phB = load_percent*R_phB_finish_value/100;
 		R_load_phC = load_percent*R_phC_finish_value/100;
 		sc_position = (rand(10000) * ((sc_position_finish_value)-(sc_position_start_value)) + (sc_position_start_value));
-		sc_phase = (rand(10000) * ((sc_phase_finish_value)-(sc_phase_start_value)) + (sc_phase_start_value));
 		ef_mutual_angle = (rand(10000) * ((ef_mutual_angle_finish_value)-(ef_mutual_angle_start_value)) + (ef_mutual_angle_start_value));
 		trans_resistance = (rand(10000) * ((trans_resistance_finish_value_int3)-(trans_resistance_start_value_int1)) + (trans_resistance_start_value_int1));
 		positive_seq_S1_percent = (rand(10000)* ((positive_seq_S1_finish_value)-(positive_seq_S1_start_value)) + (positive_seq_S1_start_value));	
@@ -611,9 +658,14 @@ if (variation_Monte_Carlo == 1)
 
 		ArmExternalTrigger true; // Обновление экрана по внешнему тригеру
 
-		SavePlotToCSV "Subsystem #1|PMU|PMU1","results\PMU_data_Monte_Carlo_exp"::itoa(idx)::".csv"; // Запись СВИ
-		SavePlotToCSV "Subsystem #1","results\IV_data_Monte_Carlo_exp"::itoa(idx)::".csv"; //Запись первичных величин тока и напряжения
-		SavePlotToCSV "Subsystem #1|CTs","results\SVC_Monte_Carlo_seq_exp"::itoa(idx)::".csv"; //Запись вторичных величин тока
+		fprintf(SC_position.CSV, "%s%s\n",sc_position,",");
+		
+		ComtradePlotSave "Subsystem #1","results\PMU_data_Monte_Carlo_exp"::itoa(idx)::".cfg",YEAR,1999,MIN,0,MAX,65535,RATIO_PRIMARY,1.0,RATIO_SECONDARY,1.0,SCALE,P,DIGITAL,0,FREQ,50.0,WRITE_POS,true;
+
+
+		//SavePlotToCSV "Subsystem #1|PMU|PMU1","results\PMU_data_Monte_Carlo_exp"::itoa(idx)::".csv"; // Запись СВИ
+		//SavePlotToCSV "Subsystem #1","results\IV_data_Monte_Carlo_exp"::itoa(idx)::".csv"; //Запись первичных величин тока и напряжения
+		//SavePlotToCSV "Subsystem #1|CTs","results\SVC_Monte_Carlo_seq_exp"::itoa(idx)::".csv"; //Запись вторичных величин тока
 
 		SetSwitch "Subsystem #1 : CTLs : Inputs : FLTA" = 0;
 
@@ -622,3 +674,4 @@ if (variation_Monte_Carlo == 1)
 		}
 	}
 
+ComtradePlotSave "Subsystem #1","C:\Users\DSofISPU1\Documents\RSCAD\RTDS_USER\fileman\LINE_500kV_IEC-61869-9\LINE_500kV\IV_date_Monte-Carlo.cfg",YEAR,1999,MIN,0,MAX,65535,RATIO_PRIMARY,1.0,RATIO_SECONDARY,1.0,SCALE,P,DIGITAL,0,FREQ,50.0,WRITE_POS,true;
